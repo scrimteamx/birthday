@@ -29,7 +29,6 @@
 
         body {
             font-family: 'Press Start 2P', cursive;
-            background-color: var(--background-color);
             color: var(--text-color);
             display: flex;
             justify-content: center;
@@ -38,6 +37,29 @@
             text-align: center;
             overflow: hidden;
             padding: 1rem;
+            
+            /* Initial background is black */
+            background-color: var(--background-color);
+            transition: background-color 1.5s ease;
+        }
+
+        /* Live Gradient Background for the final stage */
+        .final-background {
+            background: linear-gradient(270deg, #8a2be2, #8b0000);
+            background-size: 400% 400%;
+            animation: gradient-animation 15s ease infinite;
+        }
+        
+        @keyframes gradient-animation {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
         /* Start Overlay */
@@ -72,23 +94,6 @@
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
-        }
-
-        /* Video Background */
-        #birthday-video {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            object-fit: cover;
-            z-index: 10;
-            opacity: 0;
-            transition: opacity 2s ease-in-out;
-        }
-
-        #birthday-video.visible {
-            opacity: 1;
         }
 
         /* Main Container */
@@ -200,8 +205,6 @@
             75% { transform: translateX(-5px); }
         }
         
-        /* Removed final stage styling */
-
         /* Final birthday message that scales and fades in */
         #birthday-message {
             z-index: 20;
@@ -327,12 +330,6 @@
     <div id="start-overlay">
         <button id="start-button">Click to Begin</button>
     </div>
-
-    <!-- 
-        To use a different video, just replace the src attribute below with your video's URL.
-        Ensure your video is correctly encoded for web playback (e.g., MP4 H.264)
-    -->
-    <video id="birthday-video" loop muted playsinline src="cherry-blossom.1920x1080.mp4"></video>
     
     <div id="wandering-images-container"></div>
 
@@ -385,6 +382,7 @@
                 person: ['zara'] 
             };
             // ---------------------------------------------
+            let hasStartedFinalStage = false;
 
             const elements = {
                 startOverlay: document.getElementById('start-overlay'),
@@ -399,7 +397,6 @@
                 text5: document.getElementById('text5'),
                 q3: document.getElementById('q3'),
                 birthdayMessage: document.getElementById('birthday-message'),
-                birthdayVideo: document.getElementById('birthday-video'),
                 wanderingImagesContainer: document.getElementById('wandering-images-container'),
                 progressContainer: document.getElementById('progress-container'),
                 progressBar: document.getElementById('progress-bar'),
@@ -457,9 +454,9 @@
 
             const startWanderingImages = () => {
                 const imageUrls = [
-                    'https://placehold.co/150x150/FFC0CB/000000?text=Image+1',
-                    'https://placehold.co/150x150/ADD8E6/000000?text=Image+2',
-                    'https://placehold.co/150x150/90EE90/000000?text=Image+3'
+                    'https://scontent.fktm7-1.fna.fbcdn.net/v/t1.15752-9/543703657_675809498868716_971274930638720186_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=0024fc&_nc_ohc=23aUgEn-ngsQ7kNvwEaFreg&_nc_oc=AdnUWkTgb0dH5LM1PRN9UBiNWV4N_X-MuJZQ63f56t-9Gdv25NZk70eCVTiMv5MwmEw&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.fktm7-1.fna&oh=03_Q7cD3QFtWjEnZYWOeNwRRNSiyod5tZZIjyWfpT4sb0kQPmKhGw&oe=68ED0812',
+                    'https://scontent.fktm7-1.fna.fbcdn.net/v/t1.15752-9/542448254_755063277300541_3632971279804977357_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=0024fc&_nc_ohc=vVrdDAt3wLIQ7kNvwFkoyDg&_nc_oc=AdkAp_uR-sP-kVE0NenVwWSWPV8QKyGikqp66xqYF8AiIwSkIvUvct46UgrmYhemzOs&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.fktm7-1.fna&oh=03_Q7cD3QGvNG2FgToidGPryp1mzqVUeSIls4c0ALjsS9BYJntY1g&oe=68ED0753',
+                    'https://scontent.fktm7-1.fna.fbcdn.net/v/t1.15752-9/546524001_1527384091952502_7505986276446549636_n.jpg?stp=dst-jpg_s640x640_tt6&_nc_cat=108&ccb=1-7&_nc_sid=0024fc&_nc_ohc=AcZsTPib8ZEQ7kNvwEEbNCL&_nc_oc=Adlbe7Gl0P1J1nFK9VWzj5MxXzckouP1bbGc8HvjR7J-snV4X9j176lYLv1MVZ-6-OI&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent.fktm7-1.fna&oh=03_Q7cD3QERmG8UGogsRwERhO2toznA9ADKFHDdqv2d_MnigOEnWQ&oe=68ECF8A8'
                 ];
                 const container = elements.wanderingImagesContainer;
                 
@@ -514,16 +511,36 @@
                 document.addEventListener('keydown', handleKeyPress);
             };
             
-            const startFinalStage = async () => {
+            const fadeInAudio = (audioElement, duration) => {
+                const interval = 100; // ms
+                const increment = 1 / (duration / interval);
+                let volume = 0;
+                audioElement.volume = 0;
+
+                const fadeInterval = setInterval(() => {
+                    volume += increment;
+                    if (volume >= 1) {
+                        audioElement.volume = 1;
+                        clearInterval(fadeInterval);
+                    } else {
+                        audioElement.volume = volume;
+                    }
+                }, interval);
+            };
+
+            const startFinalStage = () => {
+                if (hasStartedFinalStage) return;
+                hasStartedFinalStage = true;
                 elements.mainContent.classList.add('hidden');
-                elements.birthdayVideo.classList.add('visible');
-                // The canplaythrough event listener will handle playing the video
-                elements.birthdayVideo.addEventListener('canplaythrough', () => {
-                    elements.birthdayVideo.play();
-                    playSound(elements.sounds.song);
-                    startWanderingImages();
-                    startBirthdaySequence();
-                });
+                document.body.classList.add('final-background');
+                
+                // Start music at 45 seconds and fade in over 5 seconds
+                elements.sounds.song.currentTime = 45;
+                elements.sounds.song.play().catch(e => console.log("Song play failed.", e));
+                fadeInAudio(elements.sounds.song, 5000);
+
+                startWanderingImages();
+                startBirthdaySequence();
             };
             
             const startBirthdaySequence = async () => {
@@ -551,7 +568,6 @@
                 }
                 
                 // Gracefully fade out everything to black
-                elements.birthdayVideo.style.opacity = '0';
                 elements.wanderingImagesContainer.style.opacity = '0';
                 await delay(2000);
             };
@@ -585,6 +601,13 @@
                 elements.sounds.song.play().then(() => elements.sounds.song.pause());
                 startSequence();
             }, { once: true });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.altKey && (event.key === 'r' || event.key === 'R')) {
+                    event.preventDefault(); // Prevents default browser actions
+                    startFinalStage();
+                }
+            });
         });
     </script>
 </body>
